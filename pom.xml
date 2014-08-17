@@ -63,8 +63,8 @@
         <dependency>
             <groupId>com.twitter</groupId>
             <artifactId>finagle-http_2.10</artifactId>
-            <!--<version>6.18.0</version>-->
-            <version>6.2.0</version>
+            <version>6.18.0</version>
+            <!--<version>6.2.0</version>-->
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>

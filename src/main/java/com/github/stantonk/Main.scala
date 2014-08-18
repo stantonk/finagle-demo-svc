@@ -11,9 +11,11 @@ import scala.collection.JavaConverters._
 import scala.beans.BeanInfo
 import com.google.gson.Gson
 import com.twitter.finagle.http.service.RoutingService
-import com.twitter.finagle.http.{Http, Response, Request}
+import com.twitter.finagle.http.{RichHttp, Http, Response, Request}
 import java.net.InetSocketAddress
 import com.twitter.finagle.builder.ServerBuilder
+import scala.collection.mutable
+import org.slf4j.LoggerFactory
 
 @BeanInfo
 class Person {
@@ -38,20 +40,21 @@ object Main extends App {
   ds.setUser("stantonk")
   ds.setPassword("stantonk")
 
-  def renderResponse(req : HttpRequest, content: String) : DefaultHttpResponse = {
-    val resp = new DefaultHttpResponse(req.getProtocolVersion, HttpResponseStatus.OK)
+  def renderResponse(req : HttpRequest, content: String) : Response = {
+    val resp = Response(req.getProtocolVersion, HttpResponseStatus.OK)
     resp.setContent(copiedBuffer(content.getBytes))
     resp
   }
 
   val personService = new Service[Request, Response] {
-    def apply(req: HttpRequest): Future[HttpResponse] = {
+    def apply(req: Request): Future[Response] = {
+      val id : Option[Int] = req.params.getInt("id")
+
       val qr = new QueryRunner(ds)
       val h = new BeanListHandler[Person](classOf[Person])
-
       val persons = qr.query("SELECT id, first_name as firstName, last_name as lastName, age from person", h).asScala
-//      for (p <- persons)
-//        println(p)
+      //      for (p <- persons)
+      //        println(p)
 
       Future.value(renderResponse(req, gson.toJson(persons.asJava)))
     }
@@ -61,10 +64,8 @@ object Main extends App {
     case "/persons" => personService
   }
 
-//  val server = Http.serve(":8080", service)
-//  Await.ready(server)
   ServerBuilder()
-    .codec(Http.get())
+    .codec(RichHttp[Request](Http()))
     .hostConnectionMaxLifeTime(Duration.fromSeconds(5*60))
     .readTimeout(Duration.fromSeconds(2*60))
     .name("servicename")

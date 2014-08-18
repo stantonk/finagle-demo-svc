@@ -1,44 +1,30 @@
 package com.github.stantonk
 
 import com.twitter.util.{Duration, Future}
-import org.jboss.netty.handler.codec.http.{HttpRequest, HttpResponse, DefaultHttpResponse, HttpResponseStatus}
+import org.jboss.netty.handler.codec.http.{HttpRequest, HttpResponseStatus}
 import com.twitter.finagle.Service
 import org.jboss.netty.buffer.ChannelBuffers.copiedBuffer
-import com.mysql.jdbc.jdbc2.optional.MysqlDataSource
-import org.apache.commons.dbutils.QueryRunner
-import org.apache.commons.dbutils.handlers.BeanListHandler
-import scala.collection.JavaConverters._
-import scala.beans.BeanInfo
 import com.google.gson.Gson
 import com.twitter.finagle.http.service.RoutingService
 import com.twitter.finagle.http.{RichHttp, Http, Response, Request}
 import java.net.InetSocketAddress
 import com.twitter.finagle.builder.ServerBuilder
-import scala.collection.mutable
-import org.slf4j.LoggerFactory
+import scala.slick.driver.JdbcDriver.backend.Database
+import Database.dynamicSession
+import scala.slick.jdbc.{GetResult, StaticQuery => Q}
+import com.mysql.jdbc.jdbc2.optional.MysqlDataSource
+import scala.collection.JavaConverters._
 
-@BeanInfo
-class Person {
-  var id: Int = 0
-  var firstName: String = ""
-  var lastName: String = ""
-  var age: Int = 0
 
-  override def toString: String = {
-    "Person{id=" + id +
-    ",firstName=" + firstName +
-    ",lastName=" + lastName +
-    ",age=" + age +
-    "}"
-  }
-}
+case class Person(id: Int, firstName: String, lastName: String, age: Int)
 
 object Main extends App {
-  val gson = new Gson()
-  val ds = new MysqlDataSource()
+  val ds: MysqlDataSource = new MysqlDataSource()
   ds.setURL("jdbc:mysql://localhost/stantonk")
   ds.setUser("stantonk")
   ds.setPassword("stantonk")
+  val db = Database.forDataSource(ds)
+  val gson = new Gson()
 
   def renderResponse(req : HttpRequest, content: String) : Response = {
     val resp = Response(req.getProtocolVersion, HttpResponseStatus.OK)
@@ -47,14 +33,18 @@ object Main extends App {
   }
 
   val personService = new Service[Request, Response] {
+    implicit val getPersonResult = GetResult(r => Person(r.<<, r.<<, r.<<, r.<<))
     def apply(req: Request): Future[Response] = {
       val id : Option[Int] = req.params.getInt("id")
 
-      val qr = new QueryRunner(ds)
-      val h = new BeanListHandler[Person](classOf[Person])
-      val persons = qr.query("SELECT id, first_name as firstName, last_name as lastName, age from person", h).asScala
-      //      for (p <- persons)
-      //        println(p)
+      var persons : List[Person] = null
+      db withDynSession {
+        if (id.isDefined) {
+          persons = (Q[Int, Person] + "select id, first_name as firstName, last_name as lastName, age from person where id=?")(id.get).list
+        } else {
+          persons = Q.queryNA[Person]("select id, first_name as firstName, last_name as lastName, age from person").list
+        }
+      }
 
       Future.value(renderResponse(req, gson.toJson(persons.asJava)))
     }

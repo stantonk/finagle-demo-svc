@@ -9,6 +9,7 @@ import com.twitter.finagle.http.service.RoutingService
 import com.twitter.finagle.http.{RichHttp, Http, Response, Request}
 import java.net.InetSocketAddress
 import com.twitter.finagle.builder.ServerBuilder
+import org.slf4j.{LoggerFactory, Logger}
 import scala.slick.driver.JdbcDriver.backend.Database
 import Database.dynamicSession
 import scala.slick.jdbc.{GetResult, StaticQuery => Q}
@@ -16,10 +17,10 @@ import com.mysql.jdbc.jdbc2.optional.MysqlDataSource
 import scala.collection.JavaConverters._
 import org.jboss.netty.handler.codec.http.HttpMethod._
 
-
 case class Person(id: Int, firstName: String, lastName: String, age: Int)
 
 object Main extends App {
+  val logger : Logger = LoggerFactory.getLogger("rootLogger")
   val ds: MysqlDataSource = new MysqlDataSource()
   ds.setURL("jdbc:mysql://localhost/finagle_demo_svc")
   ds.setUser("finagle")

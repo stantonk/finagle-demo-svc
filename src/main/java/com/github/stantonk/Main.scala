@@ -14,6 +14,7 @@ import Database.dynamicSession
 import scala.slick.jdbc.{GetResult, StaticQuery => Q}
 import com.mysql.jdbc.jdbc2.optional.MysqlDataSource
 import scala.collection.JavaConverters._
+import org.jboss.netty.handler.codec.http.HttpMethod._
 
 
 case class Person(id: Int, firstName: String, lastName: String, age: Int)
@@ -50,8 +51,9 @@ object Main extends App {
     }
   }
 
-  val routingService = RoutingService.byPath {
-    case "/persons" => personService
+  //TODO: next, get HTTP Methods as part of routing, build CRUD (GET,POST,PUT,DELETE) on a Person object
+  val routingService = RoutingService.byMethodAndPath {
+    case (GET, "/persons") => personService
   }
 
   ServerBuilder()

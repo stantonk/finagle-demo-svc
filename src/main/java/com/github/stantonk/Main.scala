@@ -33,7 +33,7 @@ object Main extends App {
     resp
   }
 
-  val personService = new Service[Request, Response] {
+  val personGetService = new Service[Request, Response] {
     implicit val getPersonResult = GetResult(r => Person(r.<<, r.<<, r.<<, r.<<))
     def apply(req: Request): Future[Response] = {
       val id : Option[Int] = req.params.getInt("id")
@@ -53,7 +53,7 @@ object Main extends App {
 
   //TODO: next, get HTTP Methods as part of routing, build CRUD (GET,POST,PUT,DELETE) on a Person object
   val routingService = RoutingService.byMethodAndPath {
-    case (GET, "/persons") => personService
+    case (GET, "/persons") => personGetService //TODO: get person id from route instead of querystring
   }
 
   ServerBuilder()

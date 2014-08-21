@@ -38,12 +38,11 @@ object Main extends App {
     def apply(req: Request): Future[Response] = {
       val id : Option[Int] = req.params.getInt("id")
 
-      var persons : List[Person] = null
-      db withDynSession {
+      val persons: List[Person] = db withDynSession {
         if (id.isDefined) {
-          persons = (Q[Int, Person] + "select id, first_name as firstName, last_name as lastName, age from person where id=?")(id.get).list
+          (Q[Int, Person] + "select id, first_name as firstName, last_name as lastName, age from person where id=?")(id.get).list
         } else {
-          persons = Q.queryNA[Person]("select id, first_name as firstName, last_name as lastName, age from person").list
+          Q.queryNA[Person]("select id, first_name as firstName, last_name as lastName, age from person").list
         }
       }
 

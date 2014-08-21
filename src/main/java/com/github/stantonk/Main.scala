@@ -20,9 +20,9 @@ case class Person(id: Int, firstName: String, lastName: String, age: Int)
 
 object Main extends App {
   val ds: MysqlDataSource = new MysqlDataSource()
-  ds.setURL("jdbc:mysql://localhost/stantonk")
-  ds.setUser("stantonk")
-  ds.setPassword("stantonk")
+  ds.setURL("jdbc:mysql://localhost/finagle_demo_svc")
+  ds.setUser("finagle")
+  ds.setPassword("finagle")
   val db = Database.forDataSource(ds)
   val gson = new Gson()
 

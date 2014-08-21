@@ -4,9 +4,9 @@ import com.twitter.util.{Duration, Future}
 import org.jboss.netty.handler.codec.http.{HttpRequest, HttpResponseStatus}
 import com.twitter.finagle.Service
 import org.jboss.netty.buffer.ChannelBuffers.copiedBuffer
-import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import com.twitter.finagle.http.service.RoutingService
-import com.twitter.finagle.http.{RichHttp, Http, Response, Request}
+import com.twitter.finagle.http._
 import java.net.InetSocketAddress
 import com.twitter.finagle.builder.ServerBuilder
 import org.slf4j.{LoggerFactory, Logger}
@@ -26,7 +26,7 @@ object Main extends App {
   ds.setUser("finagle")
   ds.setPassword("finagle")
   val db = Database.forDataSource(ds)
-  val gson = new Gson()
+  val gson = new GsonBuilder().serializeNulls().create()
 
   def renderResponse(req : HttpRequest, content: String) : Response = {
     val resp = Response(req.getProtocolVersion, HttpResponseStatus.OK)
@@ -51,9 +51,24 @@ object Main extends App {
     }
   }
 
+  val personPostService = new Service[Request, Response] {
+    def apply(req: Request): Future[Response] = {
+      val p : Person = req withReader { reader => gson.fromJson(reader, classOf[Person]) }
+      logger.info("new person: {}", p)
+        db withDynSession {
+          (Q.u + "insert into person (first_name, last_name, age) values (" +? p.firstName +
+            "," +? p.lastName + "," +? p.age + ")").execute
+      }
+      val response = req.response
+      response.status = Status.Accepted
+      Future.value(response)
+    }
+  }
+
   //TODO: next, get HTTP Methods as part of routing, build CRUD (GET,POST,PUT,DELETE) on a Person object
   val routingService = RoutingService.byMethodAndPath {
     case (GET, "/persons") => personGetService //TODO: get person id from route instead of querystring
+    case (POST, "/persons") => personPostService
   }
 
   ServerBuilder()
